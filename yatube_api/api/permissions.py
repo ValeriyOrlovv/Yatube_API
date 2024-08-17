@@ -3,7 +3,7 @@ from rest_framework import permissions
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
     """
-    Кастомный класс, разрешающийредактировать комментарии только автору.
+    Кастомный класс, разрешающий редактировать объект только автору.
     """
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
@@ -12,7 +12,6 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
 
 
 class CustomIsAuthenticated(permissions.BasePermission):
-
     def has_permission(self, request, view):
         if request.method == 'GET':
             return True

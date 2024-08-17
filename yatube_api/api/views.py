@@ -1,10 +1,10 @@
-# TODO:  Напишите свой вариант
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, mixins, viewsets
+from rest_framework import filters, mixins, permissions, viewsets
 from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
 
-from posts.models import Follow, Group, Post
-from api.permissions import CustomIsAuthenticated, IsOwnerOrReadOnly
+from posts.models import  Group, Post
+from api.permissions import IsOwnerOrReadOnly, CustomIsAuthenticated
 from api.serializers import (
     CommentSerializer,
     FollowSerializer,
@@ -22,7 +22,6 @@ class ListCreateMixIn(
     Кастомный миксин для веюсетов,
     обрабатывающих только GET и POST запросы.
     """
-    pass
 
 
 class PostViewSet(viewsets.ModelViewSet):
@@ -30,7 +29,10 @@ class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
     pagination_class = LimitOffsetPagination
-    permission_classes = (CustomIsAuthenticated, IsOwnerOrReadOnly,)
+    permission_classes = (
+        IsOwnerOrReadOnly,
+        IsAuthenticatedOrReadOnly
+    )
 
     def perform_create(self, serializer):
         """Метод для сохранения изменений поста с заданным значением автора."""
@@ -41,13 +43,13 @@ class GroupViewSet(viewsets.ReadOnlyModelViewSet):
     """Вьюсет для работы с группами"""
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
-    permission_classes = (IsOwnerOrReadOnly,)
+    permission_classes = (AllowAny,)
 
 
 class CommentViewSet(viewsets.ModelViewSet):
     """Вьюсет для работы с комментариями."""
     serializer_class = CommentSerializer
-    permission_classes = (IsOwnerOrReadOnly, CustomIsAuthenticated,)
+    permission_classes = (IsOwnerOrReadOnly, IsAuthenticatedOrReadOnly,)
 
     def get_posts_for_comments(self):
         """Получаем пост, к которому относятся комментарии или 404."""
@@ -78,12 +80,13 @@ class FollowViewSet(ListCreateMixIn):
     """Вьюсет для работы с подписками."""
     serializer_class = FollowSerializer
     pagination_class = LimitOffsetPagination
+    permission_classes = (permissions.IsAuthenticated,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('following__username',)
 
     def get_queryset(self):
         """Получаем подписки пользователя, который сделал запрос."""
-        return Follow.objects.filter(user=self.request.user)
+        return self.request.user.follower.all()
 
     def perform_create(self, serializer):
         """

@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.db.models import F, Q
 
 User = get_user_model()
 
@@ -28,6 +29,9 @@ class Post(models.Model):
         null=True
     )
 
+    class Meta:
+        ordering = ('pub_date',)
+
     def __str__(self):
         return self.text
 
@@ -55,4 +59,16 @@ class Follow(models.Model):
     )
 
     class Meta:
-        unique_together = ('user', 'following')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'following'],
+                name='unique_following'
+            ),
+            models.CheckConstraint(
+                check=~Q(user=F('following')),
+                name='self_following_constraint'
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f'{self.user.username} подписан на {self.following.username}'
